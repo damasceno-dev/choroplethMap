@@ -57,25 +57,25 @@ export default function Home() {
   // const pathGenerator = d3.geoPath().projection(projection)
   const pathGenerator = d3.geoPath()
 
-  const nation = topoData.objects.nation;
-  console.log(nation)
-
   // const asGeoPermissibleObjects = (geometry: any): GeoPermissibleObjects => {
   //   return geometry as GeoPermissibleObjects;
   // };
 
  
-  
-  const geoJsonData  = topojsonClient.feature(topoData, topoData.objects.counties) as GeoJSON.FeatureCollection<GeoJSON.Polygon>
 
-  console.log('geoJson', geoJsonData)
+  const geoJsonDataCounties  = topojsonClient.feature(topoData, topoData.objects.counties) as GeoJSON.FeatureCollection<GeoJSON.Polygon>
+  const statesMesh = topoData.objects.states as TSpecification.GeometryObject<{}>;
+  const geoJsonDataStates= topojsonClient.mesh(topoData, statesMesh, (a,b) => a !== b)
 
+  const s = pathGenerator(geoJsonDataStates)
+  console.log('geoJson', geoJsonDataCounties)
+  console.log('geoJsonStates', geoJsonDataStates)
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <h1>hello world</h1>
       <svg height={1000} width={svgWidth}>
-
-      {topoData.objects && geoJsonData.features.map((feat, i) => {
+        <g className='counties'>
+      {topoData.objects && geoJsonDataCounties.features.map((feat, i) => {
           // const d = pathGenerator(asGeoPermissibleObjects(feat.geometry.coordinates));
           const d = pathGenerator(feat.geometry);
           // console.log(feat.geometry.coordinates)
@@ -89,6 +89,16 @@ export default function Home() {
            ) 
           
        })}
+        </g>
+       {typeof s === 'string'  && 
+        (
+          <path
+            fill='none'
+            stroke='red'
+            d={s}
+          ></path>
+        )
+       }
 
       </svg>
 
