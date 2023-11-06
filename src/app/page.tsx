@@ -24,6 +24,10 @@ export default function Home() {
 
   const [isHovered, setIsHovered] = useState(false);
 
+  const [selectedCounty, setSelectedCounty] = useState<EducationData>()
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const [tooltipAttrs, setToolTipAttrs] = useState('opacity-0 transition-all duration-200');
+
     const {topoData, educationData} = useDataAsync(urlTopo, urlEducation) ;
     // const [topoData, setTopoData] = useState<TopoSpecification.Topology>();
     // const [educationData, setEducationData] = useState<EducationData[]>();
@@ -86,9 +90,43 @@ export default function Home() {
   // console.log(nationPath)
   // console.log('geoJson', geoJsonDataCounties)
   // console.log('geoJsonStates', geoJsonDataStates)
+
+
+  function handleMouseEnter(e: React.MouseEvent<SVGPathElement, MouseEvent>, education: EducationData) {
+    setSelectedCounty(education);
+    setIsHovered(true)
+    const clientX = e.pageX;
+    const clientY = e.pageY;
+    const toolTipPadding = -100;
+
+    setTooltipPosition({
+      top: clientY + toolTipPadding, 
+      left: clientX-60,
+    });
+    setToolTipAttrs('opacity-80');
+  }
+
+  function handleMouseLeave() {
+    setIsHovered(false)
+    setToolTipAttrs('opacity-0')
+  }
+
   return (
     <main className={'flex min-h-screen flex-col items-center justify-between p-24 bg-gray-900'}>
-      <h1>hello world</h1>
+      <h1>United States Educational Attainment</h1>
+      <h3>Percentage of adults age 25 and older with a bachelor&apos;s degree or higher (2010-2014)</h3>
+
+      <div id='tooltip' 
+        className={'flex flex-col justify-center items-center bg-slate-600 font-bold text-base text-white p-2 absolute rounded select-none pointer-events-none transition-opacity duration-500 ' + tooltipAttrs}
+        style={{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }}
+      >
+      {selectedCounty && (
+        <>
+          <p>{selectedCounty.area_name}, {selectedCounty.state}: {selectedCounty.bachelorsOrHigher}%</p>
+        </>
+      )}   
+      </div>
+
       {/* <svg height={svgHeight} width={svgWidth}> */}
       <svg viewBox="-150 0 1275 910" stroke='white'>
 
@@ -105,6 +143,8 @@ export default function Home() {
               fill={colorScale(education.bachelorsOrHigher)}
               stroke='white'
               strokeWidth={0.3}
+              onMouseEnter={(event) => {handleMouseEnter(event, education)}}
+              onMouseLeave={handleMouseLeave}
             ></path>
            ) 
           
@@ -126,9 +166,8 @@ export default function Home() {
             fill='none'
             className='stroke-gray-700'
             d={nationPath}
-            strokeWidth={isHovered ? 5 : 1}
-            onMouseEnter={() => {setIsHovered(true); console.log('entrei')}}
-            onMouseLeave={() => {setIsHovered(false); console.log('saí')}}
+            stroke={isHovered ? 'white' : 'black'}
+            strokeWidth={isHovered ? 2 : 1}
           ></path>
         )
        }
@@ -158,6 +197,9 @@ function Legend({ minEducation, maxEducation, colorScale } : LegendProperties) {
   const rectWidth = 30;
   const rectHeight = 15;
 
+  const xInitialLocation = 640
+  const yInitialLocation = 25
+
   const legendItems = [];
   for (let i = 0; i < numSteps; i++) {
     const value = minEducation + i * stepSize;
@@ -165,9 +207,9 @@ function Legend({ minEducation, maxEducation, colorScale } : LegendProperties) {
 
     legendItems.push(
       <>
-        <rect x={650 + i * rectWidth} y={10 } width={rectWidth} height={rectHeight} fill={color} />
-        <line x1={650 + i * rectWidth} x2={650 + i * rectWidth} y1={10 + rectHeight} y2={15 + rectHeight} stroke="currentColor" />
-        <text x={615 + rectWidth + i * rectWidth} y={35} style={{color:'aliceblue', fontSize: "9px", fontStyle:'normal' , transform: "translateY(10px)"}}>
+        <rect x={xInitialLocation + i * rectWidth} y={yInitialLocation } width={rectWidth} height={rectHeight} fill={color} />
+        <line x1={xInitialLocation + i * rectWidth} x2={xInitialLocation + i * rectWidth} y1={yInitialLocation + rectHeight} y2={(yInitialLocation + 5) + rectHeight} stroke="currentColor" />
+        <text x={(xInitialLocation - 35) + rectWidth + i * rectWidth} y={yInitialLocation + 25} style={{color:'aliceblue', fontSize: "9px", fontStyle:'normal' , transform: "translateY(10px)"}}>
           {value.toFixed(0)}%
         </text>
       </>
@@ -176,15 +218,12 @@ function Legend({ minEducation, maxEducation, colorScale } : LegendProperties) {
 
   legendItems.push(
     <>
-      <line x1={650 + numSteps * rectWidth} x2={650 + numSteps * rectWidth} y1={10 + rectHeight} y2={15 + rectHeight} stroke="currentColor" />
-      <text x={615 + rectWidth + numSteps * rectWidth} y={35} style={{fontSize: "9px", fontStyle:'normal' , transform: "translateY(10px)"}}>
+      <line x1={xInitialLocation + numSteps * rectWidth} x2={xInitialLocation + numSteps * rectWidth} y1={yInitialLocation + rectHeight} y2={(yInitialLocation + 5) + rectHeight} stroke="currentColor" />
+      <text x={(xInitialLocation - 35) + rectWidth + numSteps * rectWidth} y={yInitialLocation + 25} style={{fontSize: "9px", fontStyle:'normal' , transform: "translateY(10px)"}}>
         {maxEducation.toFixed(0)}%
       </text>
     </>
   )
-
-  const svgWidth = window.innerWidth * 0.1; // Adjust the scale based on your needs
-  const svgHeight = window.innerHeight * 0.2; // Adjust the scale based on your needs
 
   return (
     <g>
@@ -195,6 +234,10 @@ function Legend({ minEducation, maxEducation, colorScale } : LegendProperties) {
 
 
 //implement getStaticProps
+
+
+
+
 interface DataResponse {
   topoData: TopoSpecification.Topology | undefined;
   educationData: EducationData[] | undefined;
