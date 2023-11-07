@@ -3,10 +3,8 @@
 import * as d3 from 'd3';
 import { useState, useEffect, useRef } from "react";
 import * as topojsonClient from 'topojson-client'
-// import { useData, useDataAsync } from "./dataFetch"
- import * as TopoSpecification from 'topojson-specification'
- import * as GeoJSON from "geojson";
-// import { useDataAsync } from './dataFetch';
+import * as TopoSpecification from 'topojson-specification'
+import * as GeoJSON from "geojson";
 
 
 interface EducationData {
@@ -16,79 +14,36 @@ interface EducationData {
   bachelorsOrHigher: number;
 }
 
-
 export default function Home() {
 
   const urlTopo = 'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json';
   const urlEducation = 'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json';
 
-  const [selectedCounty, setSelectedCounty] = useState<EducationData>()
+  const [selectedCounty, setSelectedCounty] = useState<EducationData>();
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [tooltipAttrs, setToolTipAttrs] = useState('opacity-0 transition-all duration-200');
 
   const [ topoData, educationData ] = useDataAsyncGeneric<TopoSpecification.Topology, EducationData[]>(urlTopo,urlEducation);
-    // const [topoData, setTopoData] = useState<TopoSpecification.Topology>();
-    // const [educationData, setEducationData] = useState<EducationData[]>();
-    // const ignoreFetch = useRef(false)
 
-    // useEffect(() => {
-    //   async function fetchData(url: string) {
-    //     const response = await fetch(url)
-        
-    //     if (!response.ok) {
-    //       throw new Error(`HTTP error! Status: ${response.status}`);
-    //     }
-    //     const data = await response.json()
-    //     return data;
-    //   } 
-      
-    //   async function fetchMultipleData(urlTopo:string, urlEducation:string) {
-    //     const [responseUrlTopo, responseUrlEduation] = await Promise.all([fetchData(urlTopo), fetchData(urlEducation)])
-        
-        
-    //       setTopoData(responseUrlTopo);
-    //       setEducationData(responseUrlEduation);
-    //       ignoreFetch.current = true;
-    //   }
-    //   if(!ignoreFetch.current) {
-    //     fetchMultipleData(urlTopo,urlEducation);
-    //   }
-    //     // return () => {
-    //     //   ignoreFetch.current = true;
-    //     // }
-    //   }, [urlTopo, urlEducation])
-
-  // console.log(educationData)
-  //importar os outros dados, fazer a escala de cor, mostrá-la no mapa
-  //escala de cor: roxo claro a roxo escuro
-  // console.log(topoData)
-  
   if(!topoData || !educationData) {
-    return
+    return (
+      <main className={'flex min-h-screen flex-col items-center p-10 bg-gray-900 text-white'}>
+        <h1>Loading data...</h1>
+      </main>
+    )
   }
   
   const [minEducation, maxEducation] = d3.extent(educationData.map(x => x.bachelorsOrHigher)) as [number, number];
-  // console.log(minEducation, maxEducation)
   const colorScale = d3.scaleLinear([minEducation, maxEducation], ['#a989e1', '#4B0082']);
 
-  const svgWidth = 1200;
-  const svgHeight = 800;
-  const pathGenerator = d3.geoPath()
+  const pathGenerator = d3.geoPath();
  
-  const geoJsonDataCounties  = topojsonClient.feature(topoData, topoData.objects.counties) as GeoJSON.FeatureCollection<GeoJSON.Polygon>
+  const geoJsonDataCounties  = topojsonClient.feature(topoData, topoData.objects.counties) as GeoJSON.FeatureCollection<GeoJSON.Polygon>;
   const statesMesh = topoData.objects.states as TopoSpecification.GeometryObject<{}>;
-  const geoJsonDataStates= topojsonClient.mesh(topoData, statesMesh, (a,b) => a !== b)
-  const geoJsonDataNation= topojsonClient.feature(topoData, topoData.objects.nation)
-
-
-  // console.log(pathGenerator.bounds(geoJsonDataCounties))
-
-  const statesPath = pathGenerator(geoJsonDataStates)
+  const geoJsonDataStates= topojsonClient.mesh(topoData, statesMesh, (a,b) => a !== b);
+  const geoJsonDataNation= topojsonClient.feature(topoData, topoData.objects.nation);
+  const statesPath = pathGenerator(geoJsonDataStates);
   const nationPath = pathGenerator(geoJsonDataNation);
-  // console.log(nationPath)
-  // console.log('geoJson', geoJsonDataCounties)
-  // console.log('geoJsonStates', geoJsonDataStates)
-
 
   function handleMouseEnter(e: React.MouseEvent<SVGPathElement, MouseEvent>, education: EducationData) {
     setSelectedCounty(education);
@@ -104,11 +59,11 @@ export default function Home() {
   }
 
   function handleMouseLeave() {
-    setToolTipAttrs('opacity-0')
+    setToolTipAttrs('opacity-0');
   }
 
   return (
-    <main className={'flex min-h-screen flex-col items-center p-10 bg-gray-900'}>
+    <main className={'flex min-h-screen flex-col items-center p-10 bg-gray-900 text-white'}>
       <h1 id='title' className='mt-0 text-3xl'>United States Educational Attainment</h1>
       <h3 id='description' className='mt-1'>Percentage of adults age 25 and older with a bachelor&apos;s degree or higher (2010-2014)</h3>
       { selectedCounty &&      
@@ -118,15 +73,12 @@ export default function Home() {
           tooltipAttrs={tooltipAttrs}
         ></ToolTip>)
       }
-      {/* <svg height={svgHeight} width={svgWidth}> */}
       <svg viewBox="-150 0 1275 910" stroke='white'>
 
         <g className='counties'>
       {topoData.objects && geoJsonDataCounties.features.map((feat, i) => {
           const d = pathGenerator(feat.geometry);
-          // console.log(feat)
           const education = educationData.find(e => e.fips === feat.id);
-          // console.log(education)
           return d && education && (
             <path
               className='county'
@@ -141,7 +93,6 @@ export default function Home() {
               onMouseLeave={handleMouseLeave}
             ></path>
            ) 
-          
        })}
         </g>
        {typeof statesPath === 'string'  && 
@@ -169,9 +120,7 @@ export default function Home() {
         maxEducation={maxEducation}
         colorScale={colorScale}
        ></Legend>
-
       </svg>
-
     </main>
   )
 }
@@ -227,7 +176,6 @@ function Legend({ minEducation, maxEducation, colorScale } : LegendProperties) {
 function ToolTip({tooltipPosition, selectedCounty, tooltipAttrs}: {selectedCounty: EducationData, tooltipPosition: {top:number, left:number}, tooltipAttrs: string}) {
 
   return (
-    
     <div id='tooltip' 
     className={'flex flex-col justify-center items-center bg-emerald-600 font-bold text-base text-white p-2 absolute rounded select-none pointer-events-none transition-opacity duration-500 ' + tooltipAttrs}
     style={{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }}
@@ -240,52 +188,6 @@ function ToolTip({tooltipPosition, selectedCounty, tooltipAttrs}: {selectedCount
     )}   
   </div>
   )
-}
-
-
-//implement getStaticProps
-
-
-
-
-interface DataResponse {
-  topoData: TopoSpecification.Topology | undefined;
-  educationData: EducationData[] | undefined;
-}
-
-function useDataAsync(urlTopo: string, urlEducation: string) : DataResponse{
-  const [topoData, setTopoData] = useState<TopoSpecification.Topology>();
-  const [educationData, setEducationData] = useState<EducationData[]>();
-
-  useEffect(() => {
-    let ignore = false;
-    async function fetchData(url: string) {
-      const response = await fetch(url)
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      const data = await response.json()
-      return data;
-    } 
-    
-    async function fetchMultipleData(urlTopo:string, urlEducation:string) {
-      const [responseUrlTopo, responseUrlEduation] = await Promise.all([fetchData(urlTopo), fetchData(urlEducation)])
-      
-      if(!ignore) {
-        setTopoData(responseUrlTopo);
-        setEducationData(responseUrlEduation);
-      }
-    }
-
-    fetchMultipleData(urlTopo,urlEducation);
-   
-      return () => {
-        ignore = true;
-      }
-    }, [urlTopo, urlEducation])
-    
-    return {topoData, educationData};
 }
 
 function useDataAsyncGeneric<T, U>(urlOne: string, urlTwo: string) : [T | undefined, U | undefined]  {
