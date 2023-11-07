@@ -1,5 +1,7 @@
 export function deleted() {}
 
+import * as TopoSpecification from 'topojson-specification'
+import { useState, useEffect, useRef } from "react";
 interface TopologyOld {
     type: 'Topology';
     bbox: number[];
@@ -33,7 +35,54 @@ interface TopologyOld {
     }
   }
 
+  interface EducationData {
+    fips: number;
+    state: string;
+    area_name: string;
+    bachelorsOrHigher: number;
+  }
   
+  
+  
+  interface DataResponse {
+    topoData: TopoSpecification.Topology | undefined;
+    educationData: EducationData[] | undefined;
+  }
+  
+function useDataAsync(urlTopo: string, urlEducation: string) : DataResponse{
+  const [topoData, setTopoData] = useState<TopoSpecification.Topology>();
+  const [educationData, setEducationData] = useState<EducationData[]>();
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetchData(url: string) {
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const data = await response.json()
+      return data;
+    } 
+    
+    async function fetchMultipleData(urlTopo:string, urlEducation:string) {
+      const [responseUrlTopo, responseUrlEduation] = await Promise.all([fetchData(urlTopo), fetchData(urlEducation)])
+      
+      if(!ignore) {
+        setTopoData(responseUrlTopo);
+        setEducationData(responseUrlEduation);
+      }
+    }
+
+    fetchMultipleData(urlTopo,urlEducation);
+   
+      return () => {
+        ignore = true;
+      }
+    }, [urlTopo, urlEducation])
+    
+    return {topoData, educationData};
+}
 
   const objType : d3.GeoSphere = ({type: 'Sphere'})
   // const projection = d3.geoAlbersUsa().fitWidth(svgWidth, objType)
