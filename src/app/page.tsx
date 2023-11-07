@@ -22,13 +22,11 @@ export default function Home() {
   const urlTopo = 'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json';
   const urlEducation = 'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json';
 
-  const [isHovered, setIsHovered] = useState(false);
-
   const [selectedCounty, setSelectedCounty] = useState<EducationData>()
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [tooltipAttrs, setToolTipAttrs] = useState('opacity-0 transition-all duration-200');
 
-    const {topoData, educationData} = useDataAsync(urlTopo, urlEducation) ;
+  const [ topoData, educationData ] = useDataAsyncGeneric<TopoSpecification.Topology, EducationData[]>(urlTopo,urlEducation);
     // const [topoData, setTopoData] = useState<TopoSpecification.Topology>();
     // const [educationData, setEducationData] = useState<EducationData[]>();
     // const ignoreFetch = useRef(false)
@@ -94,10 +92,9 @@ export default function Home() {
 
   function handleMouseEnter(e: React.MouseEvent<SVGPathElement, MouseEvent>, education: EducationData) {
     setSelectedCounty(education);
-    setIsHovered(true)
     const clientX = e.pageX;
     const clientY = e.pageY;
-    const toolTipPadding = -100;
+    const toolTipPadding = -50;
 
     setTooltipPosition({
       top: clientY + toolTipPadding, 
@@ -107,26 +104,20 @@ export default function Home() {
   }
 
   function handleMouseLeave() {
-    setIsHovered(false)
     setToolTipAttrs('opacity-0')
   }
 
   return (
-    <main className={'flex min-h-screen flex-col items-center justify-between p-24 bg-gray-900'}>
-      <h1>United States Educational Attainment</h1>
-      <h3>Percentage of adults age 25 and older with a bachelor&apos;s degree or higher (2010-2014)</h3>
-
-      <div id='tooltip' 
-        className={'flex flex-col justify-center items-center bg-slate-600 font-bold text-base text-white p-2 absolute rounded select-none pointer-events-none transition-opacity duration-500 ' + tooltipAttrs}
-        style={{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }}
-      >
-      {selectedCounty && (
-        <>
-          <p>{selectedCounty.area_name}, {selectedCounty.state}: {selectedCounty.bachelorsOrHigher}%</p>
-        </>
-      )}   
-      </div>
-
+    <main className={'flex min-h-screen flex-col items-center p-10 bg-gray-900'}>
+      <h1 id='title' className='mt-0 text-3xl'>United States Educational Attainment</h1>
+      <h3 id='description' className='mt-1'>Percentage of adults age 25 and older with a bachelor&apos;s degree or higher (2010-2014)</h3>
+      { selectedCounty &&      
+        (<ToolTip
+          selectedCounty={selectedCounty}
+          tooltipPosition={tooltipPosition}
+          tooltipAttrs={tooltipAttrs}
+        ></ToolTip>)
+      }
       {/* <svg height={svgHeight} width={svgWidth}> */}
       <svg viewBox="-150 0 1275 910" stroke='white'>
 
@@ -138,6 +129,9 @@ export default function Home() {
           // console.log(education)
           return d && education && (
             <path
+              className='county'
+              data-fips={education.fips}
+              data-education={education.bachelorsOrHigher}
               key={feat.id}
               d={d}
               fill={colorScale(education.bachelorsOrHigher)}
@@ -164,10 +158,8 @@ export default function Home() {
         (
           <path
             fill='none'
-            className='stroke-gray-700'
             d={nationPath}
-            stroke={isHovered ? 'white' : 'black'}
-            strokeWidth={isHovered ? 2 : 1}
+            className='stroke-emerald-100'
           ></path>
         )
        }
@@ -226,10 +218,28 @@ function Legend({ minEducation, maxEducation, colorScale } : LegendProperties) {
   )
 
   return (
-    <g>
+    <g id='legend'>
       {legendItems}
     </g>
   );
+}
+
+function ToolTip({tooltipPosition, selectedCounty, tooltipAttrs}: {selectedCounty: EducationData, tooltipPosition: {top:number, left:number}, tooltipAttrs: string}) {
+
+  return (
+    
+    <div id='tooltip' 
+    className={'flex flex-col justify-center items-center bg-emerald-600 font-bold text-base text-white p-2 absolute rounded select-none pointer-events-none transition-opacity duration-500 ' + tooltipAttrs}
+    style={{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }}
+    data-education={selectedCounty.bachelorsOrHigher}
+  >
+    {selectedCounty && (
+      <>
+        <p>{selectedCounty.area_name}, {selectedCounty.state}: {selectedCounty.bachelorsOrHigher}%</p>
+      </>
+    )}   
+  </div>
+  )
 }
 
 
@@ -243,7 +253,7 @@ interface DataResponse {
   educationData: EducationData[] | undefined;
 }
 
-export function useDataAsync(urlTopo: string, urlEducation: string) : DataResponse{
+function useDataAsync(urlTopo: string, urlEducation: string) : DataResponse{
   const [topoData, setTopoData] = useState<TopoSpecification.Topology>();
   const [educationData, setEducationData] = useState<EducationData[]>();
 
@@ -276,6 +286,40 @@ export function useDataAsync(urlTopo: string, urlEducation: string) : DataRespon
     }, [urlTopo, urlEducation])
     
     return {topoData, educationData};
+}
+
+function useDataAsyncGeneric<T, U>(urlOne: string, urlTwo: string) : [T | undefined, U | undefined]  {
+  const [firstData, setFirstData] = useState<T>();
+  const [secondData, setSecondData] = useState<U>();
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetchData(url: string) {
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const data = await response.json()
+      return data;
+    } 
+    
+    async function fetchMultipleData(urlOne:string, urlTwo:string) {
+      const [responseUrlTopo, responseUrlEduation] = await Promise.all([fetchData(urlOne), fetchData(urlTwo)])
+      
+      if(!ignore) {
+        setFirstData(responseUrlTopo);
+        setSecondData(responseUrlEduation);
+      }
+    }
+
+    fetchMultipleData(urlOne,urlTwo);
+   
+      return () => {
+        ignore = true;
+      }
+    }, [urlOne, urlTwo])
+    return [firstData, secondData];
 }
 
 
