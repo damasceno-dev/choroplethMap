@@ -207,11 +207,11 @@ function useDataAsyncGeneric<T, U>(urlOne: string, urlTwo: string) : [T | undefi
     } 
     
     async function fetchMultipleData(urlOne:string, urlTwo:string) {
-      const [responseUrlTopo, responseUrlEduation] = await Promise.all([fetchData(urlOne), fetchData(urlTwo)])
+      const [responseOne, responseTwo] = await Promise.all([fetchData(urlOne), fetchData(urlTwo)])
       
       if(!ignore) {
-        setFirstData(responseUrlTopo);
-        setSecondData(responseUrlEduation);
+        setFirstData(responseOne);
+        setSecondData(responseTwo);
       }
     }
 
